@@ -1,4 +1,6 @@
 from io import BytesIO
+from datetime import timedelta
+from django.db import transaction
 from django.http import HttpResponse, JsonResponse
 from django.shortcuts import render, redirect, get_object_or_404
 from django.contrib.auth.decorators import login_required
@@ -25,45 +27,61 @@ def checkout_view(request, event_pk):
         quantity = int(request.POST.get('quantity', 1))
         payment_method = request.POST.get('payment_method', 'Cash')
 
-        if quantity < 1 or quantity > event.available_seats:
-            messages.error(request, f"Invalid quantity. Max available: {event.available_seats}")
-            return redirect('bookings:checkout', event_pk=event_pk)
+        try:
+            with transaction.atomic():
+                # Acquire row-level lock on the Event row
+                locked_event = Event.objects.select_for_update().get(pk=event_pk, is_approved=True)
 
-        total_price = event.ticket_price * quantity
+                if quantity < 1:
+                    messages.error(request, "Invalid ticket quantity.")
+                    return redirect('bookings:checkout', event_pk=event_pk)
 
-        # Reduce available seats
-        event.available_seats -= quantity
-        event.save()
+                if quantity > locked_event.available_seats:
+                    messages.error(request, f"Sorry, only {locked_event.available_seats} seats are available.")
+                    return redirect('bookings:checkout', event_pk=event_pk)
 
-        # Create booking
-        booking = Booking.objects.create(
-            user=request.user,
-            event=event,
-            quantity=quantity,
-            total_price=total_price,
-            status='Confirmed',
-        )
+                total_price = locked_event.ticket_price * quantity
 
-        # Create payment record
-        from payments.models import Payment
-        import uuid
-        Payment.objects.create(
-            booking=booking,
-            payment_method=payment_method,
-            transaction_id='TXN-' + str(uuid.uuid4()).upper()[:10],
-            amount=total_price,
-            status='Completed',
-        )
+                # Temporarily deduct seats from available count
+                locked_event.available_seats -= quantity
+                locked_event.save()
 
-        # Send notification
-        create_notification(
-            user=request.user,
-            title='Booking Confirmed! 🎉',
-            message=f'Your booking for "{event.title}" (ID: {booking.booking_id}) has been confirmed. Check your dashboard to download your ticket.'
-        )
+                # Create booking in Pending Payment state
+                booking = Booking.objects.create(
+                    user=request.user,
+                    event=locked_event,
+                    quantity=quantity,
+                    total_price=total_price,
+                    status='Pending Payment',
+                    expires_at=timezone.now() + timedelta(minutes=15)
+                )
 
-        messages.success(request, f"Booking confirmed! Your booking ID is {booking.booking_id}")
-        return redirect('bookings:confirmation', pk=booking.pk)
+                # Create corresponding Payment record in Pending state
+                from payments.models import Payment
+                import uuid
+                Payment.objects.create(
+                    booking=booking,
+                    payment_method=payment_method,
+                    transaction_id='TXN-' + str(uuid.uuid4()).upper()[:10],
+                    amount=total_price,
+                    status='Pending',
+                )
+
+                # Create notification
+                create_notification(
+                    user=request.user,
+                    title='Seat Reservation Held! ⏳',
+                    message=f'Your reservation for "{locked_event.title}" (ID: {booking.booking_id}) is held. Please complete your payment within 15 minutes.'
+                )
+
+                messages.success(request, f"Seat reservation held! Booking ID: {booking.booking_id}. Please complete payment in 15 minutes.")
+                return redirect('bookings:confirmation', pk=booking.pk)
+        except Event.DoesNotExist:
+            messages.error(request, "Event not found.")
+            return redirect('events:list')
+        except Exception as e:
+            messages.error(request, f"Checkout failed: {e}")
+            return redirect('events:detail', pk=event_pk)
 
     context = {'event': event}
     return render(request, 'bookings/checkout.html', context)
