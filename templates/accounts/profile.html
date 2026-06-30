@@ -1,0 +1,54 @@
+{% extends 'base.html' %}
+{% block title %}My Profile - EventHub{% endblock %}
+
+{% block content %}
+<section style="padding: 4rem 0;">
+    <div class="container" style="max-width: 800px;">
+        <div class="glass-panel" style="padding: 3rem; border-radius: var(--radius-lg);">
+            <div style="display: flex; align-items: center; gap: 2rem; margin-bottom: 3rem; flex-wrap: wrap;">
+                {% if user.profile_picture %}
+                    <img src="{{ user.profile_picture.url }}" alt="{{ user.username }}" style="width: 100px; height: 100px; border-radius: 50%; object-fit: cover; border: 2px solid var(--primary-color);">
+                {% else %}
+                    <div class="gradient-bg flex-center" style="width: 100px; height: 100px; border-radius: 50%; font-size: 3rem; font-weight: 700; color: white;">
+                        {{ user.username|slice:":1"|upper }}
+                    </div>
+                {% endif %}
+                
+                <div>
+                    <h2 style="font-size: 1.8rem; margin-bottom: 0.3rem;">{{ user.first_name }} {{ user.last_name }} ({{ user.username }})</h2>
+                    <p style="color: var(--text-secondary); margin-bottom: 0.5rem;">Role: <strong style="color: var(--primary-color);">{{ user.get_role_display }}</strong></p>
+                    
+                    <div style="display: flex; gap: 0.5rem; flex-wrap: wrap;">
+                        {% if user.is_email_verified %}
+                            <span style="font-size: 0.75rem; background: var(--bg-glass); color: var(--success-color); border: 1px solid var(--success-color); padding: 0.2rem 0.6rem; border-radius: 20px; font-weight: 600;">Verified Email</span>
+                        {% else %}
+                            <span style="font-size: 0.75rem; background: var(--bg-glass); color: var(--danger-color); border: 1px solid var(--danger-color); padding: 0.2rem 0.6rem; border-radius: 20px; font-weight: 600;">Unverified Email</span>
+                        {% endif %}
+                    </div>
+                </div>
+            </div>
+
+            <h3 style="font-size: 1.4rem; margin-bottom: 1.5rem; border-bottom: 1px solid var(--border-color); padding-bottom: 0.5rem;">Edit Profile Details</h3>
+            
+            <form method="post" enctype="multipart/form-data" style="display: flex; flex-direction: column; gap: 1.5rem;">
+                {% csrf_token %}
+                
+                {% for field in form %}
+                    <div class="form-group">
+                        <label for="{{ field.id_for_label }}">{{ field.label }}</label>
+                        {{ field }}
+                        {% for error in field.errors %}
+                            <span style="color: var(--danger-color); font-size: 0.8rem;">{{ error }}</span>
+                        {% endfor %}
+                    </div>
+                {% endfor %}
+                
+                <div style="display: flex; gap: 1rem; margin-top: 1rem;">
+                    <button type="submit" class="btn btn-primary">Save Changes</button>
+                    <a href="{% url 'dashboard:dashboard' %}" class="btn btn-glass">Back to Dashboard</a>
+                </div>
+            </form>
+        </div>
+    </div>
+</section>
+{% endblock %}

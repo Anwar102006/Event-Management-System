@@ -1,0 +1,171 @@
+{% extends 'base.html' %}
+{% block title %}My Dashboard - EventHub{% endblock %}
+
+{% block content %}
+<section style="padding: 4rem 0;">
+    <div class="container">
+        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 2.5rem; flex-wrap: wrap; gap: 1rem;">
+            <div>
+                <h2 style="font-size: 2rem;" class="gradient-text">Welcome back, {{ user.first_name|default:user.username }}! 👋</h2>
+                <p style="color: var(--text-secondary);">Here's your EventHub overview</p>
+            </div>
+            <div style="display: flex; gap: 1rem; flex-wrap: wrap;">
+                {% if unread_count > 0 %}
+                    <a href="{% url 'dashboard:mark_read' %}" class="btn btn-glass" style="position: relative;">
+                        🔔 Notifications
+                        <span style="position: absolute; top: -8px; right: -8px; background: var(--danger-color); color: white; border-radius: 50%; width: 20px; height: 20px; font-size: 0.7rem; display: flex; align-items: center; justify-content: center; font-weight: 700;">{{ unread_count }}</span>
+                    </a>
+                {% endif %}
+                <a href="{% url 'events:list' %}" class="btn btn-primary">Explore Events</a>
+            </div>
+        </div>
+
+        <!-- Stats Row -->
+        <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 1.5rem; margin-bottom: 3rem;">
+            <div class="glass-card" style="text-align: center;">
+                <div class="gradient-text" style="font-size: 2.5rem; font-weight: 800; margin-bottom: 0.3rem;">{{ bookings.count }}</div>
+                <p style="color: var(--text-secondary); font-weight: 600;">Total Bookings</p>
+            </div>
+            <div class="glass-card" style="text-align: center;">
+                <div class="gradient-text" style="font-size: 2.5rem; font-weight: 800; margin-bottom: 0.3rem;">{{ upcoming_bookings.count }}</div>
+                <p style="color: var(--text-secondary); font-weight: 600;">Upcoming Events</p>
+            </div>
+            <div class="glass-card" style="text-align: center;">
+                <div class="gradient-text" style="font-size: 2.5rem; font-weight: 800; margin-bottom: 0.3rem;">{{ wishlist.count }}</div>
+                <p style="color: var(--text-secondary); font-weight: 600;">Wishlist Items</p>
+            </div>
+            <div class="glass-card" style="text-align: center;">
+                <div class="gradient-text" style="font-size: 2.5rem; font-weight: 800; margin-bottom: 0.3rem;">{{ user.reviews.count }}</div>
+                <p style="color: var(--text-secondary); font-weight: 600;">Reviews Written</p>
+            </div>
+        </div>
+
+        <div style="display: grid; grid-template-columns: 1.2fr 0.8fr; gap: 2.5rem;">
+            <!-- Main: Upcoming Bookings -->
+            <div>
+                <h3 style="font-size: 1.4rem; margin-bottom: 1.5rem;">Upcoming Bookings</h3>
+                {% for booking in upcoming_bookings %}
+                    <div class="glass-card" style="margin-bottom: 1.5rem; display: flex; gap: 1.5rem; align-items: center; flex-wrap: wrap;">
+                        <div style="flex: 1;">
+                            <p style="font-size: 0.75rem; color: var(--primary-color); font-weight: 700; margin-bottom: 0.3rem;">{{ booking.event.category }}</p>
+                            <h4 style="font-size: 1.1rem; margin-bottom: 0.4rem;">{{ booking.event.title }}</h4>
+                            <p style="color: var(--text-secondary); font-size: 0.85rem;">{{ booking.event.date_time|date:"M d, Y @ H:i" }}</p>
+                            <p style="color: var(--text-muted); font-size: 0.8rem;">ID: {{ booking.booking_id }} | {{ booking.quantity }} ticket(s) | ${{ booking.total_price }}</p>
+                        </div>
+                        <div style="display: flex; flex-direction: column; gap: 0.6rem;">
+                            <a href="{% url 'bookings:download_ticket' booking.pk %}" class="btn btn-primary" style="padding: 0.4rem 1rem; font-size: 0.8rem;">📄 Download Pass</a>
+                            <a href="{% url 'payments:invoice' booking.booking_id %}" class="btn btn-glass" style="padding: 0.4rem 1rem; font-size: 0.8rem;">🧾 View Invoice</a>
+                            {% if booking.event.category == 'Workshops' %}
+                                <a href="{% url 'bookings:download_certificate' booking.pk %}" class="btn btn-glass" style="padding: 0.4rem 1rem; font-size: 0.8rem; border-color: var(--secondary-color); color: var(--secondary-color);">🎓 Certificate</a>
+                            {% endif %}
+                            <a href="{% url 'events:detail' booking.event.pk %}" class="btn btn-glass" style="padding: 0.4rem 1rem; font-size: 0.8rem;">View Event</a>
+                            <a href="{% url 'bookings:cancel' booking.pk %}" class="btn" style="padding: 0.4rem 1rem; font-size: 0.8rem; color: var(--danger-color); border: 1px solid var(--danger-color); background: transparent; border-radius: var(--radius-md);">Cancel Booking</a>
+                        </div>
+                    </div>
+                {% empty %}
+                    <div class="glass-panel" style="padding: 2rem; text-align: center;">
+                        <p style="color: var(--text-muted);">No upcoming bookings. <a href="{% url 'events:list' %}" style="color: var(--primary-color);">Explore events →</a></p>
+                    </div>
+                {% endfor %}
+
+                <!-- All Bookings History -->
+                {% if bookings.count > upcoming_bookings.count %}
+                    <h3 style="font-size: 1.4rem; margin-bottom: 1.5rem; margin-top: 3rem;">Booking History</h3>
+                    {% for booking in bookings %}
+                        {% if booking.status != 'Confirmed' or booking.event.date_time < now %}
+                        <div class="glass-card" style="margin-bottom: 1rem; display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 1rem;">
+                            <div>
+                                <h4 style="font-size: 1rem; margin-bottom: 0.3rem;">{{ booking.event.title }}</h4>
+                                <p style="color: var(--text-muted); font-size: 0.8rem;">
+                                    {{ booking.booking_id }} | {{ booking.booking_date|date:"M d, Y" }} | 
+                                    <a href="{% url 'payments:invoice' booking.booking_id %}" style="color: var(--primary-color); text-decoration: underline;">Invoice</a>
+                                    {% if booking.event.category == 'Workshops' and booking.status in 'Confirmed,Attended' %}
+                                        | <a href="{% url 'bookings:download_certificate' booking.pk %}" style="color: var(--secondary-color); text-decoration: underline;">Certificate</a>
+                                    {% endif %}
+                                </p>
+                            </div>
+                            <span style="padding: 0.3rem 0.8rem; border-radius: 20px; font-size: 0.75rem; font-weight: 700;
+                                {% if booking.status == 'Confirmed' %}background: var(--bg-glass); color: var(--success-color); border: 1px solid var(--success-color);
+                                {% elif booking.status == 'Cancelled' %}background: var(--bg-glass); color: var(--danger-color); border: 1px solid var(--danger-color);
+                                {% else %}background: var(--primary-glow); color: var(--primary-color); border: 1px solid var(--primary-color);{% endif %}">
+                                {{ booking.status }}
+                            </span>
+                        </div>
+                        {% endif %}
+                    {% endfor %}
+                {% endif %}
+            </div>
+
+            <!-- Sidebar: Notifications, Wishlist, Recently Viewed -->
+            <div>
+                <!-- Notifications -->
+                <h3 style="font-size: 1.3rem; margin-bottom: 1rem;">Notifications</h3>
+                {% for notif in notifications %}
+                    <div class="glass-card" style="margin-bottom: 1rem; {% if not notif.is_read %}border-left: 3px solid var(--primary-color);{% endif %}">
+                        <p style="font-weight: 600; font-size: 0.9rem; margin-bottom: 0.3rem;">{{ notif.title }}</p>
+                        <p style="color: var(--text-secondary); font-size: 0.8rem;">{{ notif.message|truncatechars:100 }}</p>
+                        <p style="color: var(--text-muted); font-size: 0.7rem; margin-top: 0.5rem;">{{ notif.created_at|date:"M d, Y" }}</p>
+                    </div>
+                {% empty %}
+                    <p style="color: var(--text-muted); font-size: 0.9rem; margin-bottom: 2rem;">No notifications yet.</p>
+                {% endfor %}
+
+                <!-- Wishlist -->
+                <h3 style="font-size: 1.3rem; margin-top: 2rem; margin-bottom: 1rem;">My Wishlist</h3>
+                {% for event in wishlist %}
+                    <div class="glass-card" style="margin-bottom: 1rem; display: flex; gap: 1rem; align-items: center;">
+                        <div style="flex: 1;">
+                            <p style="font-weight: 600; font-size: 0.9rem;">{{ event.title }}</p>
+                            <p style="color: var(--text-muted); font-size: 0.75rem;">{{ event.date_time|date:"M d, Y" }}</p>
+                        </div>
+                        <a href="{% url 'events:detail' event.pk %}" class="btn btn-outline" style="padding: 0.3rem 0.8rem; font-size: 0.75rem;">View</a>
+                    </div>
+                {% empty %}
+                    <p style="color: var(--text-muted); font-size: 0.9rem;">No wishlist items.</p>
+                {% endfor %}
+
+                <!-- Recently Viewed -->
+                {% if recently_viewed %}
+                    <h3 style="font-size: 1.3rem; margin-top: 2rem; margin-bottom: 1rem;">Recently Viewed</h3>
+                    {% for event in recently_viewed %}
+                        <a href="{% url 'events:detail' event.pk %}" style="display: flex; gap: 0.8rem; align-items: center; padding: 0.6rem 0; border-bottom: 1px solid var(--border-color);">
+                            <span style="font-size: 1.2rem;">👁️</span>
+                            <div>
+                                <p style="font-size: 0.85rem; font-weight: 500;">{{ event.title }}</p>
+                                <p style="color: var(--text-muted); font-size: 0.75rem;">{{ event.category }}</p>
+                            </div>
+                        </a>
+                    {% endfor %}
+                {% endif %}
+            </div>
+        </div>
+
+        <!-- Recommendations -->
+        {% if recommended %}
+            <div style="margin-top: 4rem;">
+                <h3 style="font-size: 1.5rem; margin-bottom: 2rem;">Recommended For You ✨</h3>
+                <div style="display: grid; grid-template-columns: repeat(auto-fill, minmax(260px, 1fr)); gap: 1.5rem;">
+                    {% for event in recommended %}
+                        <div class="glass-card" style="padding: 0; overflow: hidden;">
+                            <div style="height: 140px; overflow: hidden;">
+                                {% if event.banner %}
+                                    <img src="{{ event.banner.url }}" alt="{{ event.title }}" style="width:100%; height:100%; object-fit:cover;">
+                                {% else %}
+                                    <div style="width:100%; height:100%; background: linear-gradient(135deg, var(--primary-color), var(--secondary-color)); display:flex; justify-content:center; align-items:center; font-size:2.5rem;">📅</div>
+                                {% endif %}
+                            </div>
+                            <div style="padding: 1rem;">
+                                <h4 style="font-size: 0.95rem; margin-bottom: 0.5rem;">{{ event.title }}</h4>
+                                <div style="display: flex; justify-content: space-between; align-items: center;">
+                                    <span style="color: var(--primary-color); font-size: 0.75rem; font-weight: 700;">{{ event.category }}</span>
+                                    <a href="{% url 'events:detail' event.pk %}" class="btn btn-primary" style="padding: 0.3rem 0.8rem; font-size: 0.75rem;">View</a>
+                                </div>
+                            </div>
+                        </div>
+                    {% endfor %}
+                </div>
+            </div>
+        {% endif %}
+    </div>
+</section>
+{% endblock %}

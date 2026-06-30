@@ -1,0 +1,30 @@
+{% extends 'base.html' %}
+{% block title %}Login - EventHub{% endblock %}
+
+{% block content %}
+<section class="flex-center" style="min-height: 80vh; padding: 4rem 0;">
+    <div class="glass-panel" style="max-width: 450px; width: 100%; padding: 3rem; border-radius: var(--radius-lg);">
+        <h2 style="font-size: 2rem; text-align: center; margin-bottom: 2rem;" class="gradient-text">Welcome Back</h2>
+        
+        <form method="post" style="display: flex; flex-direction: column; gap: 1.5rem;">
+            {% csrf_token %}
+            
+            {% for field in form %}
+                <div class="form-group">
+                    <label for="{{ field.id_for_label }}">{{ field.label }}</label>
+                    {{ field }}
+                    {% for error in field.errors %}
+                        <span style="color: var(--danger-color); font-size: 0.8rem;">{{ error }}</span>
+                    {% endfor %}
+                </div>
+            {% endfor %}
+            
+            <button type="submit" class="btn btn-primary" style="margin-top: 1rem; width: 100%;">Login</button>
+        </form>
+        
+        <div style="text-align: center; margin-top: 2rem; font-size: 0.9rem; color: var(--text-secondary);">
+            Don't have an account? <a href="{% url 'accounts:register' %}" style="color: var(--primary-color); font-weight: 600;">Sign up here</a>
+        </div>
+    </div>
+</section>
+{% endblock %}

@@ -1,0 +1,26 @@
+# Byte-compiled / optimized / DLL files
+__pycache__/
+*.py[cod]
+*$py.class
+
+# Database
+db.sqlite3
+
+# Local virtual environment
+.venv/
+venv/
+ENV/
+
+# Media and uploads
+media/
+staticfiles/
+
+# IDE files
+.vscode/
+.idea/
+.project
+.pydevproject
+
+# System files
+Thumbs.db
+Desktop.ini

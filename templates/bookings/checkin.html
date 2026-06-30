@@ -1,0 +1,39 @@
+{% extends 'base.html' %}
+{% block title %}Ticket Check-In - EventHub{% endblock %}
+
+{% block content %}
+<section style="padding: 4rem 0;">
+    <div class="container" style="max-width: 700px;">
+        <div class="glass-panel" style="padding: 3rem; border-radius: var(--radius-lg);">
+            <h2 style="font-size: 2rem; margin-bottom: 0.5rem;" class="gradient-text">Ticket Check-In</h2>
+            <p style="color: var(--text-secondary); margin-bottom: 2.5rem;">Enter a booking ID manually to verify and check-in attendees.</p>
+
+            <form method="post" style="display: flex; gap: 1rem; margin-bottom: 2.5rem;">
+                {% csrf_token %}
+                <input type="text" name="booking_id" class="form-control" placeholder="e.g. EVH-1A2B3C4D" style="flex: 1; text-transform: uppercase;" required>
+                <button type="submit" class="btn btn-primary">Check In</button>
+            </form>
+
+            {% if booking %}
+                <div class="glass-card" style="border-left: 4px solid var(--success-color); padding: 1.5rem;">
+                    <h3 style="margin-bottom: 1rem; color: var(--success-color);">✅ Check-In Successful!</h3>
+                    <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 0.8rem; font-size: 0.9rem;">
+                        <div><span style="color:var(--text-muted);">Booking ID</span><p style="font-weight: 700;">{{ booking.booking_id }}</p></div>
+                        <div><span style="color:var(--text-muted);">Attendee</span><p style="font-weight: 700;">{{ booking.user.get_full_name|default:booking.user.username }}</p></div>
+                        <div><span style="color:var(--text-muted);">Event</span><p style="font-weight: 700;">{{ booking.event.title }}</p></div>
+                        <div><span style="color:var(--text-muted);">Tickets</span><p style="font-weight: 700;">{{ booking.quantity }}</p></div>
+                    </div>
+                </div>
+            {% endif %}
+
+            <div style="margin-top: 2.5rem; text-align: center; padding-top: 2rem; border-top: 1px solid var(--border-color);">
+                <p style="font-size: 0.85rem; color: var(--text-muted); margin-bottom: 1rem;">For future releases, scan QR codes using your device camera:</p>
+                <div class="glass-card" style="display: inline-flex; align-items: center; gap: 1rem; padding: 1rem 1.5rem;">
+                    <span style="font-size: 2rem;">📷</span>
+                    <span style="color: var(--text-secondary);">QR Scanner coming in v2.0</span>
+                </div>
+            </div>
+        </div>
+    </div>
+</section>
+{% endblock %}

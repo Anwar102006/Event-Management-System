@@ -1,0 +1,17 @@
+{% extends 'base.html' %}
+{% block title %}Delete Event - EventHub{% endblock %}
+
+{% block content %}
+<section class="flex-center" style="min-height: 80vh;">
+    <div class="glass-panel" style="max-width: 480px; width: 100%; padding: 3rem; text-align: center; border-radius: var(--radius-lg);">
+        <div style="font-size: 4rem; margin-bottom: 1.5rem;">🗑️</div>
+        <h2 style="margin-bottom: 1rem;">Delete Event?</h2>
+        <p style="color: var(--text-secondary); margin-bottom: 2rem;">Are you sure you want to permanently delete <strong>{{ event.title }}</strong>? All bookings and data will be lost.</p>
+        <form method="post" style="display: flex; gap: 1rem; justify-content: center;">
+            {% csrf_token %}
+            <button type="submit" class="btn" style="background: var(--danger-color); color: white; box-shadow: 0 4px 14px hsla(var(--hue-danger), 80%, 50%, 0.3);">Yes, Delete</button>
+            <a href="{% url 'events:detail' event.pk %}" class="btn btn-glass">Cancel</a>
+        </form>
+    </div>
+</section>
+{% endblock %}

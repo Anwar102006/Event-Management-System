@@ -1,0 +1,300 @@
+{% extends 'base.html' %}
+{% block title %}Admin Dashboard - EventHub{% endblock %}
+
+{% block extra_css %}
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+{% endblock %}
+
+{% block content %}
+<section style="padding: 4rem 0;">
+    <div class="container">
+        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 2.5rem; flex-wrap: wrap; gap: 1rem;">
+            <div>
+                <h2 style="font-size: 2rem;" class="gradient-text">Admin Control Panel 🛡️</h2>
+                <p style="color: var(--text-secondary);">Platform analytics, user management and event approvals</p>
+            </div>
+            <div style="display: flex; gap: 0.8rem; flex-wrap: wrap;">
+                <a href="{% url 'dashboard:export_csv' %}?type=daily" class="btn btn-glass" style="font-size: 0.85rem;">📊 Daily CSV</a>
+                <a href="{% url 'dashboard:export_csv' %}?type=weekly" class="btn btn-glass" style="font-size: 0.85rem;">📊 Weekly CSV</a>
+                <a href="{% url 'dashboard:export_csv' %}?type=monthly" class="btn btn-glass" style="font-size: 0.85rem;">📊 Monthly CSV</a>
+                <a href="{% url 'dashboard:export_pdf' %}?type=monthly" class="btn btn-primary" style="font-size: 0.85rem;">📄 Export PDF</a>
+            </div>
+        </div>
+
+        <!-- Platform Stats -->
+        <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 1.5rem; margin-bottom: 3rem;">
+            <div class="glass-card" style="text-align: center;">
+                <div class="gradient-text" style="font-size: 2.5rem; font-weight: 800; margin-bottom: 0.3rem;">{{ total_users }}</div>
+                <p style="color: var(--text-secondary); font-weight: 600;">Total Users</p>
+            </div>
+            <div class="glass-card" style="text-align: center;">
+                <div class="gradient-text" style="font-size: 2.5rem; font-weight: 800; margin-bottom: 0.3rem;">{{ total_events }}</div>
+                <p style="color: var(--text-secondary); font-weight: 600;">Total Events</p>
+            </div>
+            <div class="glass-card" style="text-align: center;">
+                <div class="gradient-text" style="font-size: 2.5rem; font-weight: 800; margin-bottom: 0.3rem;">{{ total_bookings }}</div>
+                <p style="color: var(--text-secondary); font-weight: 600;">Total Bookings</p>
+            </div>
+            <div class="glass-card" style="text-align: center;">
+                <div class="gradient-text" style="font-size: 2.5rem; font-weight: 800; margin-bottom: 0.3rem;">${{ total_revenue|floatformat:0 }}</div>
+                <p style="color: var(--text-secondary); font-weight: 600;">Total Revenue</p>
+            </div>
+            <div class="glass-card" style="text-align: center; border-left: 3px solid var(--warning-color);">
+                <div style="font-size: 2.5rem; font-weight: 800; margin-bottom: 0.3rem; color: var(--warning-color);">{{ pending_approvals }}</div>
+                <p style="color: var(--text-secondary); font-weight: 600;">Pending Approvals</p>
+            </div>
+        </div>
+
+        <!-- Charts Grid -->
+        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 2rem; margin-bottom: 3rem;">
+            <div class="glass-panel" style="padding: 1.5rem; border-radius: var(--radius-lg);">
+                <h3 style="font-size: 1.1rem; margin-bottom: 1.2rem;">Monthly Bookings & Revenue</h3>
+                <canvas id="monthlyChart" style="max-height: 200px;"></canvas>
+            </div>
+            <div class="glass-panel" style="padding: 1.5rem; border-radius: var(--radius-lg);">
+                <h3 style="font-size: 1.1rem; margin-bottom: 1.2rem;">Bookings by Category</h3>
+                <canvas id="categoryChart" style="max-height: 200px;"></canvas>
+            </div>
+            <div class="glass-panel" style="padding: 1.5rem; border-radius: var(--radius-lg);">
+                <h3 style="font-size: 1.1rem; margin-bottom: 1.2rem;">User Growth (Last 6 Months)</h3>
+                <canvas id="userGrowthChart" style="max-height: 200px;"></canvas>
+            </div>
+            <div class="glass-panel" style="padding: 1.5rem; border-radius: var(--radius-lg);">
+                <h3 style="font-size: 1.1rem; margin-bottom: 1.2rem;">Revenue Trend</h3>
+                <canvas id="revenueChart" style="max-height: 200px;"></canvas>
+            </div>
+        </div>
+
+        <!-- Pending Approvals -->
+        {% if pending_events %}
+        <div style="margin-bottom: 3rem;">
+            <h3 style="font-size: 1.5rem; margin-bottom: 1.5rem; color: var(--warning-color);">⏳ Pending Event Approvals</h3>
+            {% for event in pending_events %}
+                <div class="glass-card" style="margin-bottom: 1.2rem; display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 1rem; border-left: 3px solid var(--warning-color);">
+                    <div>
+                        <h4 style="font-size: 1rem; margin-bottom: 0.3rem;">{{ event.title }}</h4>
+                        <p style="color: var(--text-secondary); font-size: 0.85rem;">{{ event.category }} | {{ event.date_time|date:"M d, Y" }} | by {{ event.organizer.username }}</p>
+                    </div>
+                    <div style="display: flex; gap: 0.8rem;">
+                        <a href="{% url 'events:detail' event.pk %}" class="btn btn-glass" style="padding: 0.4rem 0.8rem; font-size: 0.8rem;">Preview</a>
+                        <a href="{% url 'dashboard:approve_event' event.pk %}" class="btn" style="padding: 0.4rem 0.8rem; font-size: 0.8rem; background: var(--success-color); color: white; border-radius: var(--radius-md);">✓ Approve</a>
+                        <a href="{% url 'dashboard:reject_event' event.pk %}" class="btn" style="padding: 0.4rem 0.8rem; font-size: 0.8rem; color: var(--danger-color); border: 1px solid var(--danger-color); border-radius: var(--radius-md); background: transparent;">✗ Reject</a>
+                    </div>
+                </div>
+            {% endfor %}
+        </div>
+        {% endif %}
+
+        <!-- User Management -->
+        <div style="margin-bottom: 3rem;">
+            <h3 style="font-size: 1.5rem; margin-bottom: 1.5rem;">👥 User Management</h3>
+            <div style="overflow-x: auto;">
+                <table style="width: 100%; border-collapse: collapse; font-size: 0.9rem;">
+                    <thead>
+                        <tr style="border-bottom: 1px solid var(--border-color);">
+                            <th style="text-align: left; padding: 0.8rem 1rem; color: var(--text-muted); font-weight: 600; font-size: 0.75rem; text-transform: uppercase;">Username</th>
+                            <th style="text-align: left; padding: 0.8rem 1rem; color: var(--text-muted); font-weight: 600; font-size: 0.75rem; text-transform: uppercase;">Email</th>
+                            <th style="text-align: left; padding: 0.8rem 1rem; color: var(--text-muted); font-weight: 600; font-size: 0.75rem; text-transform: uppercase;">Role</th>
+                            <th style="text-align: left; padding: 0.8rem 1rem; color: var(--text-muted); font-weight: 600; font-size: 0.75rem; text-transform: uppercase;">Status</th>
+                            <th style="text-align: left; padding: 0.8rem 1rem; color: var(--text-muted); font-weight: 600; font-size: 0.75rem; text-transform: uppercase;">Joined</th>
+                            <th style="text-align: left; padding: 0.8rem 1rem; color: var(--text-muted); font-weight: 600; font-size: 0.75rem; text-transform: uppercase;">Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for u in all_users %}
+                            <tr style="border-bottom: 1px solid var(--border-color); transition: background 0.2s;">
+                                <td style="padding: 0.8rem 1rem; font-weight: 600;">{{ u.username }}</td>
+                                <td style="padding: 0.8rem 1rem; color: var(--text-secondary);">{{ u.email|truncatechars:25 }}</td>
+                                <td style="padding: 0.8rem 1rem;">
+                                    <span style="font-size: 0.75rem; padding: 0.2rem 0.6rem; border-radius: 20px; font-weight: 700;
+                                        {% if u.role == 'admin' %}background: var(--primary-glow); color: var(--primary-color);
+                                        {% elif u.role == 'organizer' %}background: var(--secondary-glow); color: var(--secondary-color);
+                                        {% else %}background: var(--bg-glass); color: var(--text-secondary);{% endif %}">
+                                        {{ u.get_role_display }}
+                                    </span>
+                                </td>
+                                <td style="padding: 0.8rem 1rem;">
+                                    <span style="font-size: 0.75rem; font-weight: 700; {% if u.is_active %}color: var(--success-color);{% else %}color: var(--danger-color);{% endif %}">
+                                        {% if u.is_active %}Active{% else %}Inactive{% endif %}
+                                    </span>
+                                </td>
+                                <td style="padding: 0.8rem 1rem; color: var(--text-muted); font-size: 0.8rem;">{{ u.date_joined|date:"M d, Y" }}</td>
+                                <td style="padding: 0.8rem 1rem;">
+                                    {% if not u.is_superuser %}
+                                        <div style="display: flex; gap: 0.5rem;">
+                                            <a href="{% url 'dashboard:toggle_user' u.pk %}" class="btn btn-glass" style="padding: 0.2rem 0.6rem; font-size: 0.75rem;">{% if u.is_active %}Deactivate{% else %}Activate{% endif %}</a>
+                                            <form action="{% url 'dashboard:delete_user' u.pk %}" method="post" style="display: inline;" onsubmit="return confirm('Delete user {{ u.username }}?')">
+                                                {% csrf_token %}
+                                                <button type="submit" style="padding: 0.2rem 0.6rem; font-size: 0.75rem; color: var(--danger-color); border: 1px solid var(--danger-color); border-radius: var(--radius-sm); background: transparent; cursor: pointer;">Delete</button>
+                                            </form>
+                                        </div>
+                                    {% else %}
+                                        <span style="font-size: 0.75rem; color: var(--text-muted);">Superuser</span>
+                                    {% endif %}
+                                </td>
+                            </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+
+        <!-- Recent Bookings -->
+        <div>
+            <h3 style="font-size: 1.5rem; margin-bottom: 1.5rem;">📋 Recent Bookings</h3>
+            <div style="overflow-x: auto;">
+                <table style="width: 100%; border-collapse: collapse; font-size: 0.9rem;">
+                    <thead>
+                        <tr style="border-bottom: 1px solid var(--border-color);">
+                            <th style="text-align: left; padding: 0.8rem 1rem; color: var(--text-muted); font-weight: 600; font-size: 0.75rem;">BOOKING ID</th>
+                            <th style="text-align: left; padding: 0.8rem 1rem; color: var(--text-muted); font-weight: 600; font-size: 0.75rem;">USER</th>
+                            <th style="text-align: left; padding: 0.8rem 1rem; color: var(--text-muted); font-weight: 600; font-size: 0.75rem;">EVENT</th>
+                            <th style="text-align: left; padding: 0.8rem 1rem; color: var(--text-muted); font-weight: 600; font-size: 0.75rem;">QTY</th>
+                            <th style="text-align: left; padding: 0.8rem 1rem; color: var(--text-muted); font-weight: 600; font-size: 0.75rem;">AMOUNT</th>
+                            <th style="text-align: left; padding: 0.8rem 1rem; color: var(--text-muted); font-weight: 600; font-size: 0.75rem;">STATUS</th>
+                            <th style="text-align: left; padding: 0.8rem 1rem; color: var(--text-muted); font-weight: 600; font-size: 0.75rem;">DATE</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for b in recent_bookings %}
+                            <tr style="border-bottom: 1px solid var(--border-color);">
+                                <td style="padding: 0.8rem 1rem; font-weight: 700; color: var(--primary-color);">{{ b.booking_id }}</td>
+                                <td style="padding: 0.8rem 1rem;">{{ b.user.username }}</td>
+                                <td style="padding: 0.8rem 1rem;">{{ b.event.title|truncatechars:25 }}</td>
+                                <td style="padding: 0.8rem 1rem;">{{ b.quantity }}</td>
+                                <td style="padding: 0.8rem 1rem; font-weight: 700;">${{ b.total_price }}</td>
+                                <td style="padding: 0.8rem 1rem;">
+                                    <span style="font-size: 0.75rem; font-weight: 700; {% if b.status == 'Confirmed' %}color: var(--success-color);{% elif b.status == 'Cancelled' %}color: var(--danger-color);{% else %}color: var(--primary-color);{% endif %}">{{ b.status }}</span>
+                                </td>
+                                <td style="padding: 0.8rem 1rem; color: var(--text-muted); font-size: 0.8rem;">{{ b.booking_date|date:"M d, Y" }}</td>
+                            </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+</section>
+
+{% block extra_js %}
+<script>
+    const monthsLabels = {{ months_labels|safe }};
+    const monthlyBookings = {{ monthly_bookings|safe }};
+    const monthlyRevenue = {{ monthly_revenue|safe }};
+    const categoryLabels = {{ category_labels|safe }};
+    const categoryCounts = {{ category_counts|safe }};
+    const userGrowth = {{ user_growth|safe }};
+
+    const isDark = document.body.getAttribute('data-theme') === 'dark';
+    const textColor = isDark ? 'rgba(255,255,255,0.7)' : 'rgba(0,0,0,0.6)';
+    const gridColor = 'rgba(150,150,150,0.1)';
+
+    // Monthly Bookings & Revenue - Dual axis
+    const ctx1 = document.getElementById('monthlyChart').getContext('2d');
+    new Chart(ctx1, {
+        type: 'bar',
+        data: {
+            labels: monthsLabels,
+            datasets: [{
+                label: 'Bookings',
+                data: monthlyBookings,
+                backgroundColor: 'rgba(124,58,237,0.6)',
+                borderRadius: 6,
+            }]
+        },
+        options: {
+            responsive: true,
+            plugins: { legend: { labels: { color: textColor } } },
+            scales: {
+                y: { beginAtZero: true, ticks: { color: textColor }, grid: { color: gridColor } },
+                x: { ticks: { color: textColor }, grid: { display: false } }
+            }
+        }
+    });
+
+    // Category Pie Chart
+    const ctx2 = document.getElementById('categoryChart').getContext('2d');
+    new Chart(ctx2, {
+        type: 'doughnut',
+        data: {
+            labels: categoryLabels,
+            datasets: [{
+                data: categoryCounts,
+                backgroundColor: ['#7c3aed','#db2777','#2563eb','#059669','#d97706','#dc2626','#7c3aed'],
+                hoverOffset: 8,
+            }]
+        },
+        options: {
+            responsive: true,
+            plugins: { legend: { labels: { color: textColor, boxWidth: 12 } } }
+        }
+    });
+
+    // User Growth Chart
+    const ctx3 = document.getElementById('userGrowthChart').getContext('2d');
+    const g3 = ctx3.createLinearGradient(0, 0, 0, 200);
+    g3.addColorStop(0, 'rgba(219, 39, 119, 0.4)');
+    g3.addColorStop(1, 'rgba(219, 39, 119, 0)');
+    new Chart(ctx3, {
+        type: 'line',
+        data: {
+            labels: monthsLabels,
+            datasets: [{
+                label: 'New Users',
+                data: userGrowth,
+                backgroundColor: g3,
+                borderColor: '#db2777',
+                borderWidth: 2.5,
+                tension: 0.4,
+                fill: true,
+                pointBackgroundColor: '#db2777',
+                pointBorderColor: '#fff',
+                pointBorderWidth: 2,
+                pointRadius: 5,
+            }]
+        },
+        options: {
+            responsive: true,
+            plugins: { legend: { display: false } },
+            scales: {
+                y: { beginAtZero: true, ticks: { color: textColor }, grid: { color: gridColor } },
+                x: { ticks: { color: textColor }, grid: { display: false } }
+            }
+        }
+    });
+
+    // Revenue Chart
+    const ctx4 = document.getElementById('revenueChart').getContext('2d');
+    const g4 = ctx4.createLinearGradient(0, 0, 0, 200);
+    g4.addColorStop(0, 'rgba(5, 150, 105, 0.4)');
+    g4.addColorStop(1, 'rgba(5, 150, 105, 0)');
+    new Chart(ctx4, {
+        type: 'line',
+        data: {
+            labels: monthsLabels,
+            datasets: [{
+                label: 'Revenue ($)',
+                data: monthlyRevenue,
+                backgroundColor: g4,
+                borderColor: '#059669',
+                borderWidth: 2.5,
+                tension: 0.4,
+                fill: true,
+                pointBackgroundColor: '#059669',
+                pointBorderColor: '#fff',
+                pointBorderWidth: 2,
+                pointRadius: 5,
+            }]
+        },
+        options: {
+            responsive: true,
+            plugins: { legend: { display: false } },
+            scales: {
+                y: { beginAtZero: true, ticks: { color: textColor }, grid: { color: gridColor } },
+                x: { ticks: { color: textColor }, grid: { display: false } }
+            }
+        }
+    });
+</script>
+{% endblock %}
+{% endblock %}

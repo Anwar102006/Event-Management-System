@@ -1,0 +1,42 @@
+{% extends 'base.html' %}
+{% block title %}Booking Confirmed - EventHub{% endblock %}
+
+{% block content %}
+<section class="flex-center" style="min-height: 80vh; padding: 4rem 0;">
+    <div class="glass-panel" style="max-width: 600px; width: 100%; padding: 3rem; text-align: center; border-radius: var(--radius-lg);">
+        <!-- Animated checkmark -->
+        <div style="width: 80px; height: 80px; border-radius: 50%; background: linear-gradient(135deg, var(--primary-color), var(--secondary-color)); display: flex; align-items: center; justify-content: center; margin: 0 auto 2rem; font-size: 2.5rem; animation: float 3s ease-in-out infinite;">✅</div>
+        
+        <h2 style="font-size: 2rem; margin-bottom: 0.5rem;" class="gradient-text">Booking Confirmed!</h2>
+        <p style="color: var(--text-secondary); margin-bottom: 2.5rem;">Your ticket has been secured. Show your QR code at the entrance.</p>
+
+        <div class="glass-card" style="text-align: left; margin-bottom: 2.5rem; padding: 2rem;">
+            <h3 style="font-size: 1.2rem; margin-bottom: 1.5rem;">Booking Details</h3>
+            <div style="display: flex; flex-direction: column; gap: 0.8rem; font-size: 0.9rem;">
+                <div style="display: flex; justify-content: space-between;"><span style="color:var(--text-muted);">Booking ID</span><strong class="gradient-text">{{ booking.booking_id }}</strong></div>
+                <div style="display: flex; justify-content: space-between;"><span style="color:var(--text-muted);">Event</span><strong>{{ booking.event.title }}</strong></div>
+                <div style="display: flex; justify-content: space-between;"><span style="color:var(--text-muted);">Date</span><strong>{{ booking.event.date_time|date:"F d, Y @ H:i" }}</strong></div>
+                <div style="display: flex; justify-content: space-between;"><span style="color:var(--text-muted);">Venue</span><strong>{{ booking.event.venue }}</strong></div>
+                <div style="display: flex; justify-content: space-between;"><span style="color:var(--text-muted);">Tickets</span><strong>{{ booking.quantity }}</strong></div>
+                <div style="display: flex; justify-content: space-between;"><span style="color:var(--text-muted);">Total Paid</span><strong class="gradient-text">${{ booking.total_price }}</strong></div>
+                <div style="display: flex; justify-content: space-between;"><span style="color:var(--text-muted);">Status</span><span style="color: var(--success-color); font-weight: 700;">{{ booking.status }}</span></div>
+            </div>
+
+            {% if booking.qr_code_image %}
+                <div style="text-align: center; margin-top: 2rem; padding-top: 2rem; border-top: 1px solid var(--border-color);">
+                    <p style="font-size: 0.8rem; color: var(--text-muted); margin-bottom: 1rem;">Your QR Code (present at entry)</p>
+                    <img src="{{ booking.qr_code_image.url }}" alt="Ticket QR Code" style="width: 160px; height: 160px; border: 4px solid var(--primary-color); border-radius: var(--radius-md); display: inline-block;">
+                </div>
+            {% endif %}
+        </div>
+
+        <div style="display: flex; gap: 1rem; justify-content: center; flex-wrap: wrap;">
+            <a href="{% url 'bookings:download_ticket' booking.pk %}" class="btn btn-primary">📄 Download PDF Ticket</a>
+            <a href="{% url 'events:list' %}" class="btn btn-glass">Browse More Events</a>
+        </div>
+        <div style="margin-top: 1rem;">
+            <a href="{% url 'dashboard:dashboard' %}" style="color: var(--text-muted); font-size: 0.9rem;">Go to Dashboard →</a>
+        </div>
+    </div>
+</section>
+{% endblock %}
