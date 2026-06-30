@@ -9,9 +9,10 @@ class Payment(models.Model):
     )
     STATUS_CHOICES = (
         ('Pending', 'Pending'),
+        ('Processing', 'Processing'),
         ('Completed', 'Completed'),
-        ('Refunded', 'Refunded'),
         ('Failed', 'Failed'),
+        ('Refunded', 'Refunded'),
     )
 
     booking = models.OneToOneField(Booking, on_delete=models.CASCADE, related_name='payment')

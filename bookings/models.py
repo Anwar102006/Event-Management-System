@@ -9,9 +9,13 @@ from events.models import Event
 
 class Booking(models.Model):
     STATUS_CHOICES = (
+        ('Pending Payment', 'Pending Payment'),
+        ('Payment Processing', 'Payment Processing'),
         ('Confirmed', 'Confirmed'),
         ('Cancelled', 'Cancelled'),
+        ('Expired', 'Expired'),
         ('Attended', 'Attended'),
+        ('Refunded', 'Refunded'),
     )
 
     booking_id = models.CharField(max_length=20, unique=True, editable=False)
@@ -20,11 +24,15 @@ class Booking(models.Model):
     quantity = models.PositiveIntegerField(default=1)
     total_price = models.DecimalField(max_digits=10, decimal_places=2)
     booking_date = models.DateTimeField(auto_now_add=True)
-    status = models.CharField(max_length=20, choices=STATUS_CHOICES, default='Confirmed')
+    status = models.CharField(max_length=30, choices=STATUS_CHOICES, default='Pending Payment')
     qr_code_image = models.ImageField(upload_to='qrcodes/', blank=True, null=True)
+    expires_at = models.DateTimeField(null=True, blank=True)
 
     class Meta:
         ordering = ['-booking_date']
+        indexes = [
+            models.Index(fields=['status', 'expires_at'], name='booking_expiry_idx'),
+        ]
 
     def __str__(self):
         return f"{self.booking_id} - {self.user.username} @ {self.event.title}"
